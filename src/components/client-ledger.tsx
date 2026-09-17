@@ -7,6 +7,7 @@ import { DeletePaymentButton, EditPaymentDialog, type PaymentValues } from "@/co
 import { LedgerSheet, type LedgerCompany, type LedgerMonthGroup, type LedgerRow } from "@/components/ledger-sheet"
 import { Spinner } from "@/components/ui"
 import { formatPKR } from "@/lib/money"
+import { elementToPng } from "@/lib/export-image"
 import { fileSlug, formatDate, monthKey, monthLabel } from "@/lib/utils"
 
 function paymentValues(row: LedgerRow): PaymentValues {
@@ -43,6 +44,16 @@ function Particulars({ row }: { row: LedgerRow }) {
   )
 }
 
+function sums(rows: LedgerRow[]) {
+  let debit = 0
+  let credit = 0
+  for (const row of rows) {
+    debit += row.debit || 0
+    credit += row.credit || 0
+  }
+  return { debit, credit }
+}
+
 function groupsFor(ledger: LedgerRow[], month: string): LedgerMonthGroup[] {
   const keys = [...new Set(ledger.map((row) => monthKey(row.date)))].sort()
   const selected = month === "all" ? keys : keys.filter((key) => key === month)
@@ -50,10 +61,15 @@ function groupsFor(ledger: LedgerRow[], month: string): LedgerMonthGroup[] {
   return selected.map((key) => {
     const previous = ledger.filter((row) => monthKey(row.date) < key)
     const rows = ledger.filter((row) => monthKey(row.date) === key)
+    const { debit, credit } = sums(rows)
+    const opening = previous.at(-1)?.balance ?? 0
     return {
       key,
       label: monthLabel(key),
-      opening: previous.at(-1)?.balance ?? 0,
+      opening,
+      debit,
+      credit,
+      closing: rows.at(-1)?.balance ?? opening,
       rows,
     }
   })
@@ -81,6 +97,19 @@ export function ClientLedger({
     [ledger],
   )
   const groups = useMemo(() => groupsFor(ledger, month), [ledger, month])
+  const grand = useMemo(
+    () =>
+      groups.reduce(
+        (acc, group) => ({
+          debit: acc.debit + group.debit,
+          credit: acc.credit + group.credit,
+          closing: group.closing,
+        }),
+        { debit: 0, credit: 0, closing: 0 },
+      ),
+    [groups],
+  )
+  const showGrand = groups.length > 1
   const periodLabel = month === "all" ? "All months" : monthLabel(month)
   const showOpening = month !== "all"
   const filename = `${fileSlug(clientName)}-ledger-${month === "all" ? "all" : month}`
@@ -88,10 +117,8 @@ export function ClientLedger({
   async function capture() {
     const node = exportRef.current
     if (!node) throw new Error("Ledger preview is not ready.")
-    const { toPng } = await import("html-to-image")
-    return toPng(node, {
+    return elementToPng(node, {
       pixelRatio: 2,
-      cacheBust: true,
       backgroundColor: "#ffffff",
     })
   }
@@ -246,9 +273,32 @@ export function ClientLedger({
                 </div>,
               )
             }
+            rows.push(
+              <div
+                key={`total-${group.key}`}
+                className="flex items-center justify-between gap-3 border-t border-line bg-cream/60 px-4 py-3"
+              >
+                <p className="text-sm font-semibold">{showGrand ? `${group.label} total` : "Total"}</p>
+                <div className="text-right text-sm">
+                  <p className="font-semibold">{formatPKR(group.closing)}</p>
+                  <p className="text-xs text-muted">Dr {formatPKR(group.debit)}</p>
+                  <p className="text-xs text-good">Cr {formatPKR(group.credit)}</p>
+                </div>
+              </div>,
+            )
             return rows
           })
         )}
+        {showGrand ? (
+          <div className="flex items-center justify-between gap-3 border-t-2 border-ink px-4 py-3">
+            <p className="text-sm font-semibold">Grand total</p>
+            <div className="text-right text-sm">
+              <p className="font-semibold">{formatPKR(grand.closing)}</p>
+              <p className="text-xs text-muted">Dr {formatPKR(grand.debit)}</p>
+              <p className="text-xs text-good">Cr {formatPKR(grand.credit)}</p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="hidden overflow-x-auto md:block">
@@ -331,9 +381,29 @@ export function ClientLedger({
                     </tr>,
                   )
                 }
+                rows.push(
+                  <tr key={`total-${group.key}`} className="border-t border-line bg-cream/60 font-semibold">
+                    <td className="px-4 py-2" />
+                    <td className="px-4 py-2">{showGrand ? `${group.label} total` : "Total"}</td>
+                    <td className="px-4 py-2 text-right">{formatPKR(group.debit)}</td>
+                    <td className="px-4 py-2 text-right">{formatPKR(group.credit)}</td>
+                    <td className="px-4 py-2 text-right">{formatPKR(group.closing)}</td>
+                    <td className="px-4 py-2" />
+                  </tr>,
+                )
                 return rows
               })
             )}
+            {showGrand ? (
+              <tr className="border-t-2 border-ink font-semibold">
+                <td className="px-4 py-2" />
+                <td className="px-4 py-2">Grand total</td>
+                <td className="px-4 py-2 text-right">{formatPKR(grand.debit)}</td>
+                <td className="px-4 py-2 text-right">{formatPKR(grand.credit)}</td>
+                <td className="px-4 py-2 text-right">{formatPKR(grand.closing)}</td>
+                <td className="px-4 py-2" />
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -346,6 +416,7 @@ export function ClientLedger({
             periodLabel={periodLabel}
             groups={groups}
             showOpening={showOpening}
+            grand={showGrand ? grand : null}
           />
         </div>
       </div>

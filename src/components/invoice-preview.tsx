@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Download } from "lucide-react"
 import { Spinner } from "@/components/ui"
+import { elementToPng } from "@/lib/export-image"
 
 const A4_WIDTH_MM = 210
 const A4_HEIGHT_MM = 297
@@ -43,10 +44,8 @@ export function InvoicePreview({
   async function capture() {
     const node = sheetRef.current
     if (!node) throw new Error("Invoice preview is not ready.")
-    const { toPng } = await import("html-to-image")
-    return toPng(node, {
+    return elementToPng(node, {
       pixelRatio: 2,
-      cacheBust: true,
       backgroundColor: "#ffffff",
     })
   }

@@ -107,7 +107,10 @@ export function InvoiceDocument({
             <img
               src="/aac-logo.png"
               alt="Asghar Ali Chemicals"
-              className="h-[120px] w-auto object-contain object-left"
+              width={124}
+              height={120}
+              decoding="sync"
+              className="h-[120px] w-[124px] object-contain object-left"
             />
           </div>
 

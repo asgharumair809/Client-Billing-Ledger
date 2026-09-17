@@ -27,6 +27,9 @@ export type LedgerMonthGroup = {
   key: string
   label: string
   opening: number
+  debit: number
+  credit: number
+  closing: number
   rows: LedgerRow[]
 }
 
@@ -36,12 +39,14 @@ export function LedgerSheet({
   periodLabel,
   groups,
   showOpening,
+  grand = null,
 }: {
   company: LedgerCompany
   clientName: string
   periodLabel: string
   groups: LedgerMonthGroup[]
   showOpening: boolean
+  grand?: { debit: number; credit: number; closing: number } | null
 }) {
   return (
     <article
@@ -69,7 +74,8 @@ export function LedgerSheet({
       {groups.length === 0 ? (
         <p style={{ fontSize: 14, color: "#6b645b" }}>No ledger entries for this period.</p>
       ) : (
-        groups.map((group) => (
+        <>
+        {groups.map((group) => (
           <section key={group.key} style={{ marginBottom: 28 }}>
             {groups.length > 1 || showOpening ? (
               <h3 style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 700 }}>{group.label}</h3>
@@ -128,10 +134,76 @@ export function LedgerSheet({
                     </td>
                   </tr>
                 ))}
+                <tr>
+                  <td style={{ padding: "8px 10px", borderTop: "1px solid #d8d0c2", background: "#f3eee4" }} />
+                  <td
+                    style={{
+                      padding: "8px 10px",
+                      borderTop: "1px solid #d8d0c2",
+                      background: "#f3eee4",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {grand ? `${group.label} total` : "Total"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "8px 10px",
+                      borderTop: "1px solid #d8d0c2",
+                      background: "#f3eee4",
+                      textAlign: "right",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {formatPKR(group.debit)}
+                  </td>
+                  <td
+                    style={{
+                      padding: "8px 10px",
+                      borderTop: "1px solid #d8d0c2",
+                      background: "#f3eee4",
+                      textAlign: "right",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {formatPKR(group.credit)}
+                  </td>
+                  <td
+                    style={{
+                      padding: "8px 10px",
+                      borderTop: "1px solid #d8d0c2",
+                      background: "#f3eee4",
+                      textAlign: "right",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {formatPKR(group.closing)}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </section>
-        ))
+        ))}
+        {grand ? (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: "8px 10px", borderTop: "2px solid #14221c", width: "18%" }} />
+                <td style={{ padding: "8px 10px", borderTop: "2px solid #14221c", fontWeight: 700 }}>Grand total</td>
+                <td style={{ padding: "8px 10px", borderTop: "2px solid #14221c", textAlign: "right", fontWeight: 700, width: "18%" }}>
+                  {formatPKR(grand.debit)}
+                </td>
+                <td style={{ padding: "8px 10px", borderTop: "2px solid #14221c", textAlign: "right", fontWeight: 700, width: "18%" }}>
+                  {formatPKR(grand.credit)}
+                </td>
+                <td style={{ padding: "8px 10px", borderTop: "2px solid #14221c", textAlign: "right", fontWeight: 700, width: "18%" }}>
+                  {formatPKR(grand.closing)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        ) : null}
+        </>
       )}
     </article>
   )
