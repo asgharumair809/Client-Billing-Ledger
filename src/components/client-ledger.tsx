@@ -8,6 +8,7 @@ import { LedgerSheet, type LedgerCompany, type LedgerMonthGroup, type LedgerRow 
 import { Spinner } from "@/components/ui"
 import { formatPKR } from "@/lib/money"
 import { elementToPng } from "@/lib/export-image"
+import { saveBlob, saveDataUrl } from "@/lib/save-file"
 import { fileSlug, formatDate, monthKey, monthLabel } from "@/lib/utils"
 
 function paymentValues(row: LedgerRow): PaymentValues {
@@ -128,10 +129,7 @@ export function ClientLedger({
     setExporting("png")
     try {
       const dataUrl = await capture()
-      const link = document.createElement("a")
-      link.download = `${filename}.png`
-      link.href = dataUrl
-      link.click()
+      await saveDataUrl(dataUrl, `${filename}.png`)
     } catch {
       setExportError("Could not create PNG.")
     } finally {
@@ -163,7 +161,7 @@ export function ClientLedger({
         pdf.addImage(dataUrl, "PNG", margin, offset, imgWidth, imgHeight)
         remaining -= pageHeight - margin
       }
-      pdf.save(`${filename}.pdf`)
+      await saveBlob(pdf.output("blob"), `${filename}.pdf`)
     } catch {
       setExportError("Could not create PDF.")
     } finally {

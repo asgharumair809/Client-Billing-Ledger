@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Download } from "lucide-react"
 import { Spinner } from "@/components/ui"
 import { elementToPng } from "@/lib/export-image"
+import { saveBlob, saveDataUrl } from "@/lib/save-file"
 
 const A4_WIDTH_MM = 210
 const A4_HEIGHT_MM = 297
@@ -55,10 +56,7 @@ export function InvoicePreview({
     setExporting("png")
     try {
       const dataUrl = await capture()
-      const link = document.createElement("a")
-      link.download = `${filename}.png`
-      link.href = dataUrl
-      link.click()
+      await saveDataUrl(dataUrl, `${filename}.png`)
     } catch {
       setError("Could not download PNG.")
     } finally {
@@ -74,7 +72,7 @@ export function InvoicePreview({
       const { jsPDF } = await import("jspdf")
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
       pdf.addImage(dataUrl, "PNG", 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM)
-      pdf.save(`${filename}.pdf`)
+      await saveBlob(pdf.output("blob"), `${filename}.pdf`)
     } catch {
       setError("Could not download PDF.")
     } finally {
